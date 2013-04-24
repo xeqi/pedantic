@@ -1,72 +1,105 @@
-(ns pedantic.core)
+(ns pedantic.core
+  (:import (org.sonatype.aether.collection DependencyGraphTransformer)
+           (org.sonatype.aether.util.graph.transformer
+            ConflictIdSorter
+            TransformationContextKeys)))
 
-(defn- group
-  [group-artifact]
-    (or (namespace group-artifact) (name group-artifact)))
+(defn range? [{:keys [node]}]
+  (if-let [vc (.getVersionConstraint node)]
+    (not (empty? (.getRanges vc)))))
 
-(defn similiar [[dep version & opts] [sdep sversion & sopts]]
-  (let [om (apply hash-map opts)
-        som (apply hash-map sopts)]
-    (and (= (group dep)
-            (group sdep))
-         (= (name dep)
-            (name sdep))
-         (= (:extension om)
-            (:extension som))
-         (= (:classifier om)
-            (:classifier som)))))
+(defn node->artifact-map [node]
+  (if-let [d (.getDependency node)]
+    (if-let [a (.getArtifact d)]
+      (let [b (bean a)]
+        (-> b
+            (select-keys [:artifactId :groupId :exclusions :version :extension :properties])
+            (update-in [:exclusions] vec))))))
 
-(defn lower? [v1 v2]
-  (< (.compareToIgnoreCase v1 v2) 0))
+(defn node= [n1 n2]
+  (= (node->artifact-map n1)
+     (node->artifact-map n2)))
 
-(defn higher? [v1 v2]
-  (> (.compareToIgnoreCase v1 v2) 0))
+(defn get-sorted-conflict-ids [node context]
+  (if-let [ids (.get context
+                     TransformationContextKeys/SORTED_CONFLICT_IDS)]
+    ids
+    (do (-> (ConflictIdSorter.)
+            (.transformGraph node context))
+        (.get context
+              TransformationContextKeys/SORTED_CONFLICT_IDS))))
 
-(defn breaks-expectation? [[_ real-v] [_ expected-v] top-level]
-  (or (lower? real-v expected-v)
-      (and (higher? real-v expected-v) top-level)))
+(defn get-conflict-id-map [context]
+  (.get context TransformationContextKeys/CONFLICT_IDS))
 
+(defn all-nodes [node]
+  (loop [nodes [{:node node :parents []}]
+         res []]
+    (if (not (empty? nodes))
+      (recur (mapcat (fn [{:keys [node parents]}]
+                       ;;check for recursive dependencies
+                       (if-not (some #{node} parents)
+                         (for [c (.getChildren node)]
+                           {:node c
+                            :parents (conj parents node)}))) nodes)
+             (concat res nodes))
+      res)))
 
-(defn overrulled? [real-dep [parent depmap :as individual]]
-  (some #(and (not= real-dep %)
-              (similiar real-dep %)
-              (breaks-expectation? real-dep % (= parent %))
-              %) (keys depmap)))
+(defn id-to-nodes [node context]
+  (let [sorted-ids (get-sorted-conflict-ids node context)
+        conflict-ids (get-conflict-id-map context)
+        nodes (all-nodes node)]
+    (apply merge-with concat
+           (map (fn [{:keys [node parents] :as x}]
+                  {(.get conflict-ids node)
+                   [x]})
+                nodes))))
 
-(defn find-parent [node collective-deps]
-  (first (filter identity (for [[dep transative-deps] collective-deps]
-                            (if (contains? transative-deps node)
-                              dep)))))
+(defn lt [node1 node2]
+  (< (compare (.getVersion node1) (.getVersion node2)) 0))
 
-(defn find-parents [node collective-deps]
-  (loop [node node
-         children '()]
-    (if-let [parent (first (filter identity
-                                   (for [[dep transative-deps] collective-deps]
-                                     (if (contains? transative-deps node)
-                                       dep))))]
-      (recur parent (conj children node))
-      (conj children node))))
+(defn mention [{:keys [node parents] :as n} conflicting-nodes
+               overrides ranges]
+  (let [nodes (remove range? (conflicting-nodes node))
+        rest (remove #(= (:node %) node) nodes)
+        m (filter (fn [x]
+                    (or (lt node (:node x))
+                        (= 1 (count (:parents x))))) rest)]
+    (if (not (empty? m))
+      (swap! overrides conj {:accepted n
+                             :ignoreds m
+                             :ranges
+                             (filter #(node= (:node %)
+                                             (:node n)) ranges)})
+      (doseq [c (.getChildren node)]
+        (mention {:node c
+                  :parents (conj parents node)}
+                 conflicting-nodes
+                 overrides
+                 ranges)))))
 
-(defn overrulled-versions? [collective-deps individual-deps]
-  (filter identity
-          (for [real-dep collective-deps
-                individual individual-deps]
-                (if-let [unexpected (overrulled? real-dep individual)]
-                  (vector real-dep (find-parents unexpected (second individual)))))))
+(defn use-transformer
+  "Use the pedantic transformer.  This will wrap the current one in the session.
 
-(defn sublist? [l1 l2]
-  (= (take (count l1) l2) l1))
+ranges and overrides are expect to be (atom []).  This allows setting the values there since the return value can't be used here.
 
-(defn is-higher-override? [[o e :as d1] [o2 e2 :as d2]]
-  (and (not= d1 d2)
-       (sublist? o o2)
-       (sublist? e e2)))
-
-(defn remove-subtrees [overrides]
-  (remove #(some (fn [x] (is-higher-override? x %)) overrides) overrides))
-
-(defn determine-overrulled [collective-deps individual-deps]
-  (remove-subtrees
-   (for [[real over]  (overrulled-versions? (keys collective-deps) individual-deps)]
-     (vector (find-parents real collective-deps) over))))
+After resolution:
+  ranges will be a vector of maps with keys [:node :parents]
+  overrides will be a vector of maps with keys [:accepted :ignoreds :ranges].  :accepted is the map that was resolved. :ignored is a list of maps that were not used. :ranges is a list of maps containing version ranges that might have affected the resolution."
+  [session ranges overrides]
+  (let [transformer (.getDependencyGraphTransformer session)]
+    (.setDependencyGraphTransformer
+     session
+     (reify DependencyGraphTransformer
+       (transformGraph [self node context]
+         (reset! ranges (filter range? (all-nodes node)))
+         (let [conflictmap (id-to-nodes node context)
+               conflict-id-map (get-conflict-id-map context)]
+           (.transformGraph transformer node context)
+           (mention {:node node
+                     :parents []}
+                    #(conflictmap
+                      (.get conflict-id-map %))
+                    overrides
+                    @ranges))
+         node)))))

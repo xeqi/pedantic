@@ -1,6 +1,8 @@
 (ns pedantic.helper
   (:require [cemerick.pomegranate.aether :as aether]
-            [clojure.java.io :as io]))
+            [pedantic.core :as pedantic]
+            [clojure.java.io :as io]
+            [clojure.walk :as walk]))
 
 (def tmp-dir (io/file
               (System/getProperty "java.io.tmpdir") "pedantic"))
@@ -85,9 +87,39 @@
                 (throw (org.apache.maven.wagon.ResourceDoesNotExistException. ""))))))))
     (f)))
 
+(def ranges (atom []))
+(def overrides (atom []))
+
+(defn reset-state [f]
+  (reset! ranges [])
+  (reset! overrides [])
+  (f))
+
 (defn resolve-deps [coords]
   (aether/resolve-dependencies
    :coordinates coords
    :repositories {"test-repo" {:url "fake://ss"
                                :checksum false}}
-   :local-repo tmp-local-repo-dir))
+   :local-repo tmp-local-repo-dir
+   :repository-session-fn
+   #(-> %
+        aether/repository-session
+        (pedantic/use-transformer ranges
+                                  overrides))))
+
+(defmulti translate type)
+
+(defmethod translate :default [x] x)
+
+(defmethod translate java.util.List
+  [l]
+  (remove nil? (map translate l)))
+
+(defmethod translate java.util.Map
+  [m]
+  (into {} (map (fn [[k v]] [k (translate v)]) m)))
+
+(defmethod translate org.sonatype.aether.graph.DependencyNode
+  [n]
+  (if-let [a (pedantic/node->artifact-map n)]
+    [(symbol (:artifactId a)) (:version a)]))
