@@ -1,5 +1,5 @@
-(defproject pedantic "0.0.3-SNAPSHOT"
-  :description "Checkout out dependency graphs for common unexpected cases"
+(defproject pedantic "0.1.0"
+  :description "A Clojure library designed to be used with pomegrante to check for common unexpected cases."
   :url "https://github.com/xeqi/pedantic"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
