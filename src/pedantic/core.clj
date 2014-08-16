@@ -79,7 +79,7 @@ overriden dependencies."
                             {}
                             ;; Remove ranges as they cause problems and were
                             ;; warned above
-                            (remove range? potential-paths))]
+                            (remove path/range? potential-paths))]
       (set-overrides! overrides
                       #(->> % (.get node->id) id->paths)
                       (path/all-paths node)

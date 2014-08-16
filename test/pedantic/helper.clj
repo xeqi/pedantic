@@ -1,6 +1,7 @@
 (ns pedantic.helper
   (:require [cemerick.pomegranate.aether :as aether]
             [pedantic.core :as pedantic]
+            [pedantic.node :as node]
             [clojure.java.io :as io]
             [clojure.walk :as walk]))
 
@@ -121,5 +122,5 @@
 
 (defmethod translate org.sonatype.aether.graph.DependencyNode
   [n]
-  (if-let [a (pedantic/node->artifact-map n)]
+  (if-let [a (node/node->artifact-map n)]
     [(symbol (:artifactId a)) (:version a)]))
