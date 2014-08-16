@@ -1,9 +1,10 @@
 (defproject pedantic "0.1.1-SNAPSHOT"
-  :description "A Clojure library designed to be used with pomegrante to check for common unexpected cases."
+  :description "A Clojure library designed to be used with pomegrante to check for common unexpected dependency problems."
   :url "https://github.com/xeqi/pedantic"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [com.cemerick/pomegranate "0.2.0"]]
-  :profiles {:1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}}
-  :aliases {"all" ["with-profile" "test:test,1.5"]})
+  :profiles {:1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
+             :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
+  :aliases {"all" ["with-profile" "test:test,1.5:test,1.6"]})

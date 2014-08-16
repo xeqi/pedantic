@@ -28,7 +28,7 @@
 (deftest ranges-are-found
   (resolve-deps '[[range "1"]])
   (is (= (translate @ranges) '[{:node [a "1"]
-                                :parents [[range "1"]]}
+                               :parents [[range "1"]]}
                                {:node [a "2"]
                                :parents [[range "1"]]}]))
   (is (= @overrides
