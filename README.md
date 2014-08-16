@@ -1,7 +1,7 @@
 
 # pedantic
 
-A Clojure library designed to be used with pomegrante to check for common unexpected cases.
+A Clojure library designed to be used with pomegrante to check for common unexpected dependency problems.
 
 ## Usage
 
@@ -24,13 +24,13 @@ Use the transformer as part of the pomegranate dependency resolution.  Include t
 ```
 
 After resolution:
-  ```ranges``` will be a vector of maps with keys ```[:node :parents]```
-  ```overrides``` will be a vector of maps with keys ```[:accepted :ignoreds :ranges]```.  ```:accepted``` is the map that was resolved. ```:ignored``` is a list of maps that were not used. ```:ranges``` is a list of maps containing version ranges that might have affected the resolution.
+  ```ranges``` will be a vector of paths (maps with keys ```[:node :parents]```)
+  ```overrides``` will be a vector of maps with keys ```[:accepted :ignoreds :ranges]```.  ```:accepted``` is the path that was resolved. ```:ignored``` is a list of paths that were not used. ```:ranges``` is a list of paths containing version ranges that might have affected the resolution.
 
 The nodes included will be ```org.sonatype.aether.graph.DependencyNode```s.
 
 ## License
 
-Copyright © 2013 Nelson Morris
+Copyright © 2014 Nelson Morris
 
 Distributed under the Eclipse Public License, the same as Clojure.
