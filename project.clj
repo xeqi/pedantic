@@ -1,4 +1,4 @@
-(defproject pedantic "0.2.0"
+(defproject pedantic "0.2.1-SNAPSHOT"
   :description "A Clojure library designed to be used with pomegrante to check for common unexpected dependency problems."
   :url "https://github.com/xeqi/pedantic"
   :license {:name "Eclipse Public License"
