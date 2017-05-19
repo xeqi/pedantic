@@ -3054,8 +3054,8 @@ conflict.</p>
 <li><code>VersionConstraint</code></li>
 </ul>
 </td><td class="codes"><pre class="brush: clojure">(ns pedantic.core
-  (:import (org.sonatype.aether.collection DependencyGraphTransformer)
-           (org.sonatype.aether.util.graph.transformer
+  (:import (org.eclipse.aether.collection DependencyGraphTransformer)
+           (org.eclipse.aether.util.graph.transformer
             ConflictIdSorter
             TransformationContextKeys))
   (:require [pedantic.node :as node]

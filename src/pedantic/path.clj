@@ -21,7 +21,7 @@ Short circuits a path when a cycle is detected."
   "Does the path point to a DependencyNode asking for a version range?"
   [{:keys [node]}]
   (when-let [vc (.getVersionConstraint node)]
-    (not (empty? (.getRanges vc)))))
+    (not (nil? (.getRange vc)))))
 
 (defn top-level?
   "Is the path a top level dependency in the project?"

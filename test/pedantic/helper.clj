@@ -120,7 +120,7 @@
   [m]
   (into {} (map (fn [[k v]] [k (translate v)]) m)))
 
-(defmethod translate org.sonatype.aether.graph.DependencyNode
+(defmethod translate org.eclipse.aether.graph.DependencyNode
   [n]
   (if-let [a (node/node->artifact-map n)]
     [(symbol (:artifactId a)) (:version a)]))

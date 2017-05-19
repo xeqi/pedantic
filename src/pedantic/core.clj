@@ -21,8 +21,8 @@ Additional important classes from Aether:
 * `Artifact`
 * `Version`
 * `VersionConstraint`"
-  (:import (org.sonatype.aether.collection DependencyGraphTransformer)
-           (org.sonatype.aether.util.graph.transformer
+  (:import (org.eclipse.aether.collection DependencyGraphTransformer)
+           (org.eclipse.aether.util.graph.transformer
             ConflictIdSorter
             TransformationContextKeys))
   (:require [pedantic.node :as node]

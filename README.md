@@ -27,7 +27,7 @@ After resolution:
   ```ranges``` will be a vector of paths (maps with keys ```[:node :parents]```)
   ```overrides``` will be a vector of maps with keys ```[:accepted :ignoreds :ranges]```.  ```:accepted``` is the path that was resolved. ```:ignored``` is a list of paths that were not used. ```:ranges``` is a list of paths containing version ranges that might have affected the resolution.
 
-The nodes included will be ```org.sonatype.aether.graph.DependencyNode```s.
+The nodes included will be ```org.eclipse.aether.graph.DependencyNode```s.
 
 ## License
 
